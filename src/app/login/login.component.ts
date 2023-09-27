@@ -33,7 +33,7 @@ import { ConfirmationDialogsService } from '../services/dialog/confirmation.serv
 import { Subscription } from 'rxjs';
 import { InterceptedHttp } from 'app/http.interceptor';
 import * as CryptoJS from 'crypto-js';
-
+import * as bcrypt from 'bcrypt';
 
 @Component({
   selector: 'login-component',
@@ -83,17 +83,14 @@ export class loginContentClass implements OnInit, OnDestroy{
           });
 
           console.log('privleges', this.privleges);
-          //console.log("apimanClientKey", this.privleges[0].apimanClientKey);
           
           if (this.privleges.length > 0) {
-            // console.log(this.userID);
+            
             response = response.data;
             this.dataSettingService.Userdata = response;
             this.dataSettingService.agentID = response.agentID;
             this.czentrixService.ip = response.loginIPAddress;
             this.dataSettingService.current_serviceID=response.previlegeObj[0].roles[0].serviceRoleScreenMappings[0].providerServiceMapping.m_ServiceMaster.serviceID;
-            
-            // this.dataSettingService.userPriveliges = response.Previlege;
             this.dataSettingService.userPriveliges = this.privleges;
             this.dataSettingService.uid = response.userID;
             this.dataSettingService.uname = response.userName;
@@ -102,8 +99,7 @@ export class loginContentClass implements OnInit, OnDestroy{
             if (response.isAuthenticated === true && response.Status === "Active") {
               this.router.navigate(['/MultiRoleScreenComponent']);
               localStorage.setItem('onCall', 'false');
-              // open socket connection
-              // this.socketService.reInstantiate();
+              
             }
             if (response.isAuthenticated === true && response.Status === "New") {
               this.router.navigate(['/setQuestions']);
@@ -168,14 +164,23 @@ export class loginContentClass implements OnInit, OnDestroy{
   }
 
   login(doLogOut: any) {
-    this.encryptPassword = this.encrypt(this.Key_IV, this.password)
-    this.loginservice.authenticateUser(this.userID, this.encryptPassword, doLogOut).subscribe(
-      (response: any) => {
-        if(response !== undefined && response !== null && response.data.previlegeObj !== undefined && response.data.previlegeObj !== null) {
-       this.successCallback(response)}
-        },
-      (error: any) => this.errorCallback(error));
-  };
+    bcrypt.hash(this.password, 12, (err, hash) => {
+      if (err) {
+        // Handle error
+        console.error(err);
+      } else {
+        this.encryptPassword = hash;
+        this.loginservice.authenticateUser(this.userID, this.encryptPassword, doLogOut).subscribe(
+          (response: any) => {
+            if (response !== undefined && response !== null && response.data.previlegeObj !== undefined && response.data.previlegeObj !== null) {
+              this.successCallback(response);
+            }
+          },
+          (error: any) => this.errorCallback(error)
+        );
+      }
+    });
+  }
   successCallback(response: any) {
     console.log(JSON.stringify(response));
     if (response.statusCode == 200) {
@@ -186,9 +191,9 @@ export class loginContentClass implements OnInit, OnDestroy{
       });
 
       console.log('privleges', this.privleges);
-      // console.log("apimanClientKey", this.privleges[0].apimanClientKey);
+      
       if (this.privleges.length > 0) {
-        // console.log(this.userID);
+        
         response = response.data;
         console.log("response from apiman", response)
         this.dataSettingService.current_serviceID=response.previlegeObj[0].roles[0].serviceRoleScreenMappings[0].providerServiceMapping.m_ServiceMaster.serviceID;
@@ -214,10 +219,9 @@ export class loginContentClass implements OnInit, OnDestroy{
             this.dataSettingService.loginKey = response.data.login_key;
             console.log("loginKey: " + this.dataSettingService.loginKey);
           }, (err) => {
-            //this.alertService.alert(err.errorMessage, 'error');
+            
           })
-          // open socket connection
-          // this.socketService.reInstantiate();
+          
         }
         if (response.isAuthenticated === true && response.Status === "New") {
           this.router.navigate(['/setQuestions']);
@@ -232,7 +236,6 @@ export class loginContentClass implements OnInit, OnDestroy{
     } else {
       console.log('login failed');
 
-      // this.loginResult = response.errorMessage;
     }
   };
   errorCallback(error: any) {
@@ -244,7 +247,7 @@ export class loginContentClass implements OnInit, OnDestroy{
     }
   };
   
-  /* AN4085822 - Concurrent login issue*/
+  
   loginUser(doLogOut) {
     this.loginservice
     .userLogOutFromPreviousSession(this.userID)
