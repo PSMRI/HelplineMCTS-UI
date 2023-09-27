@@ -164,7 +164,7 @@ export class loginContentClass implements OnInit, OnDestroy{
   }
 
   login(doLogOut: any) {
-    bcrypt.hash(this.password, 10, (err, hash) => {
+    bcrypt.hash(this.password, 12, (err, hash) => {
       if (err) {
         // Handle error
         console.error(err);
