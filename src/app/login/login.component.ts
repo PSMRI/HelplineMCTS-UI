@@ -32,7 +32,8 @@ import { SocketService } from '../services/socketService/socket.service';
 import { ConfirmationDialogsService } from '../services/dialog/confirmation.service';
 import { Subscription } from 'rxjs';
 import { InterceptedHttp } from 'app/http.interceptor';
-import * as CryptoJS from 'crypto-js';
+const bcrypt = require('bcrypt');
+//import * as CryptoJS from 'crypto-js';
 
 
 @Component({
@@ -168,14 +169,23 @@ export class loginContentClass implements OnInit, OnDestroy{
   }
 
   login(doLogOut: any) {
-    this.encryptPassword = this.encrypt(this.Key_IV, this.password)
-    this.loginservice.authenticateUser(this.userID, this.encryptPassword, doLogOut).subscribe(
-      (response: any) => {
-        if(response !== undefined && response !== null && response.data.previlegeObj !== undefined && response.data.previlegeObj !== null) {
-       this.successCallback(response)}
-        },
-      (error: any) => this.errorCallback(error));
-  };
+    bcrypt.hash(this.password, 10, (err, hash) => {
+      if (err) {
+        // Handle error
+        console.error(err);
+      } else {
+        this.encryptPassword = hash;
+        this.loginservice.authenticateUser(this.userID, this.encryptPassword, doLogOut).subscribe(
+          (response: any) => {
+            if (response !== undefined && response !== null && response.data.previlegeObj !== undefined && response.data.previlegeObj !== null) {
+              this.successCallback(response);
+            }
+          },
+          (error: any) => this.errorCallback(error)
+        );
+      }
+    });
+  }
   successCallback(response: any) {
     console.log(JSON.stringify(response));
     if (response.statusCode == 200) {
